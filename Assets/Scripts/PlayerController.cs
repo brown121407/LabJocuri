@@ -1,28 +1,62 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
+using TMPro;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class PlayerController : MonoBehaviour
 {
-    private Rigidbody rb;
+    [SerializeField]
+    private float speed = 3.0f;
+
+    [SerializeField] private GameManager gameManager;
+
+    private Rigidbody _rb;
+
+    private GameObject _pickup;
 
     // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        _rb = GetComponent<Rigidbody>();
+
+        SpawnPickup();
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
-        float oX = Input.GetAxis("Horizontal");
-        float oZ = Input.GetAxis("Vertical");
-        rb.AddForce(new Vector3(oX, 0, oZ));
-        Debug.Log(oX + " " + oZ);
+        if (!gameManager.Won)
+        {
+            var oX = Input.GetAxis("Horizontal");
+            var oZ = Input.GetAxis("Vertical");
+            _rb.AddForce(new Vector3(oX, 0, oZ) * speed);
+        }
     }
 
     // Update is called once per frame
-    void Update()
+    private void OnTriggerEnter(Collider other)
     {
-        
+        if (other.gameObject.CompareTag("Pickup"))
+        {
+            speed = Mathf.Abs(speed);
+            gameManager.UpdateScore();
+
+            var pickup = other.gameObject.GetComponent<Pickup>();
+            if (pickup.type == Pickup.PickupType.Red)
+            {
+                speed *= -1;
+            }
+            
+            other.gameObject.SetActive(false);
+            SpawnPickup();
+        }
+    }
+
+    private void SpawnPickup()
+    {
+        var index = Random.Range(0, gameManager.pickups.Count);
+        var pickupPosition = GameManager.RandomPosition(transform.position);
+        var pickup = gameManager.pickups[index];
+        pickup.transform.position = pickupPosition;
+        pickup.SetActive(true);
     }
 }
