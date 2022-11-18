@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -57,6 +58,13 @@ public class PlayerController : MonoBehaviour
         var pickupPosition = GameManager.RandomPosition(transform.position);
         var pickup = gameManager.pickups[index];
         pickup.transform.position = pickupPosition;
+        pickup.SetActive(true);
+    }
+
+    public void SpawnPickup(Vector3 position, Pickup.PickupType type)
+    {
+        var pickup = gameManager.pickups.First(x => x.GetComponent<Pickup>().type == type);
+        pickup.transform.position = position;
         pickup.SetActive(true);
     }
 }

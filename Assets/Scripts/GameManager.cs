@@ -1,9 +1,29 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
+using File = System.IO.File;
 using Random = UnityEngine.Random;
+
+/// <summary>
+/// Pentru împachetare/despachetare poziție sferă și cub, tipul cubului, scor, timp.
+/// </summary>
+[Serializable]
+public class GameState
+{
+    public Vector3 spherePosition;
+    public Vector3 cubePosition;
+    public Pickup.PickupType cubeType;
+    public uint score;
+    public float time;
+
+    public string SaveToJson()
+    {
+        return JsonUtility.ToJson(this);
+    }
+}
 
 public class GameManager : MonoBehaviour
 {
@@ -25,9 +45,11 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        // Se incarca cele 2 tipuri de cuburi
         var goodPickup = Resources.Load("Prefabs/Pickup") as GameObject;
         var badPickup = Resources.Load("Prefabs/Bad Pickup") as GameObject;
 
+        // Instantiem cuburile "bune"
         for (var i = 0; i < _noGoodPickups; i++)
         {
             var pickup = Instantiate(goodPickup, Vector3.zero, Quaternion.identity);
@@ -35,6 +57,7 @@ public class GameManager : MonoBehaviour
             pickups.Add(pickup);
         }
         
+        // Instantiem cuburile "rele"
         for (var i = 0; i < _noBadPickups; i++)
         {
             var pickup = Instantiate(badPickup, Vector3.zero, Quaternion.identity);
@@ -50,7 +73,6 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        GameObject.FindWithTag(Tags.Player);
         _timerText = GameObject.Find("Timer").GetComponent<TextMeshProUGUI>();
 
         StartCoroutine(RunTimer());
@@ -61,10 +83,24 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Comma))
         {
             PlayerPrefs.DeleteAll();
-            Debug.Log("DELETED PLAYER PREFS");
+        }
+        
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.S))
+        {
+            // Save game
+            Save();
+        }
+        
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.L))
+        {
+            // Load game
+            Load();
         }
     }
 
+    /// <summary>
+    /// Corutina pt timer.
+    /// </summary>
     private IEnumerator RunTimer()
     {
         while (true)
@@ -75,6 +111,9 @@ public class GameManager : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Se genereaza o pozitie aleatoare pentru spawnarea unui cub.
+    /// </summary>
     public static Vector3 RandomPosition(Vector3 origin)
     {
         while (true)
@@ -129,7 +168,41 @@ public class GameManager : MonoBehaviour
     public void SaveBestPlayer(string text)
     {
         PlayerPrefs.SetString("Player", text);
-        Debug.Log(PlayerPrefs.GetString("Player"));
         input.gameObject.SetActive(false);
+    }
+
+    private void Save()
+    {
+        // Gaseste pickupul activ in scena
+        var pickup = pickups.First(x => x.activeSelf);
+        var gameState = new GameState
+        {
+            score = _score,
+            time = _timer,
+            cubePosition = pickup.transform.position,
+            cubeType = pickup.GetComponent<Pickup>().type,
+            spherePosition = GameObject.FindWithTag(Tags.Player).transform.position
+        };
+        var json = gameState.SaveToJson();
+        File.WriteAllText(Application.persistentDataPath + "/gameState.json", json);
+    }
+    
+    private void Load()
+    {
+        var json = File.ReadAllText(Application.persistentDataPath + "/gameState.json");
+        var gameState = JsonUtility.FromJson<GameState>(json);
+
+        _score = gameState.score;
+        _timer = gameState.time;
+        
+        // Gasesc pickupul activ pentru a fi dezactivat.
+        pickups.First(x => x.activeSelf).SetActive(false);
+
+        var player = GameObject.FindWithTag(Tags.Player);
+        // Adaug un pickup cu datele din fisierul salvat
+        player.GetComponent<PlayerController>().SpawnPickup(gameState.cubePosition, gameState.cubeType);
+        player.transform.position = gameState.spherePosition;
+        
+        _scoreText.text = $"Score: {_score}";
     }
 }

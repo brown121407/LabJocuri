@@ -1,3 +1,7 @@
+# Lab 7
+
+Salvare pozitiei bilei, cubului, tipul cubului, scor si timp.
+
 # Lab 6
 
 - Adăugat nou prefab "Bad Pickup" - un cub roșu.
